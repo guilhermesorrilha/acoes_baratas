@@ -42,6 +42,8 @@ ZERO_QUER_DIZER_VAZIO = [
     "mrg_liq", "liq_corr", "roic", "roe",
 ]
 
+TOLERANCIA_DIVIDA_ZERO = 0.05
+
 MINIMO_DE_LINHAS = 500
 
 
@@ -84,7 +86,16 @@ def ler_tabela(conteudo: bytes) -> pd.DataFrame:
         if coluna != "papel":
             df[coluna] = df[coluna].map(para_numero)
     df[ZERO_QUER_DIZER_VAZIO] = df[ZERO_QUER_DIZER_VAZIO].replace(0, float("nan"))
+    zero_confirmado = divida_pelas_outras_colunas(df).abs() < TOLERANCIA_DIVIDA_ZERO
+    df["div_liq_patrim"] = df["div_liq_patrim"].mask(
+        (df["div_liq_patrim"] == 0) & ~zero_confirmado
+    )
     return df
+
+
+def divida_pelas_outras_colunas(df: pd.DataFrame) -> pd.Series:
+    # EV/EBIT ÷ P/EBIT = (valor de mercado + dívida líquida) ÷ valor de mercado
+    return (df["ev_ebit"] / df["p_ebit"] - 1) * df["p_vp"]
 
 
 def para_numero(texto: str) -> float:

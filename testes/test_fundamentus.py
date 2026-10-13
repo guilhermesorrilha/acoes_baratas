@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from robo.fontes.fundamentus import ler_tabela, para_numero
+from robo.fontes.fundamentus import divida_pelas_outras_colunas, ler_tabela, para_numero
 
 AMOSTRA = Path(__file__).parent / "dados" / "fundamentus_amostra.html"
 
@@ -54,6 +54,26 @@ def test_zero_de_banco_vira_vazio(tabela):
 
 def test_dividendo_zero_continua_zero(tabela):
     assert tabela.loc["HAPV3", "div_yield"] == 0
+
+
+def test_divida_bate_com_ev_ebit_e_p_ebit(tabela):
+    petr4 = tabela.loc["PETR4"]
+    assert divida_pelas_outras_colunas(petr4) == pytest.approx(petr4["div_liq_patrim"], abs=0.01)
+
+
+def test_divida_zero_confirmada_continua_zero(tabela):
+    assert tabela.loc["EZTC3", "div_liq_patrim"] == 0
+
+
+def test_divida_zero_desmentida_vira_vazio():
+    pagina = AMOSTRA.read_bytes().replace(b"\t0,65\t", b"\t0,00\t")
+    tabela = ler_tabela(pagina).set_index("papel")
+    assert math.isnan(tabela.loc["PETR4", "div_liq_patrim"])
+
+
+def test_divida_zero_sem_como_conferir_vira_vazio(tabela):
+    assert math.isnan(tabela.loc["ITUB4", "div_liq_patrim"])
+    assert math.isnan(tabela.loc["IRBR3", "div_liq_patrim"])
 
 
 def test_traco_vira_vazio(tabela):
